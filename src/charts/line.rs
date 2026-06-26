@@ -12,6 +12,11 @@ pub struct LineChartProps {
     labels: Option<Labels>,
     #[props(optional)]
     series_labels: Option<Labels>,
+    /// Optional explicit stroke color per series (any CSS color string). When a
+    /// color is present for a series index it overrides the default red-shaded
+    /// stroke; missing entries fall back to the generated color.
+    #[props(optional)]
+    series_colors: Option<Labels>,
 
     #[props(default = "100%".to_string(), into)]
     width: String,
@@ -247,11 +252,28 @@ pub fn LineChart(props: LineChartProps) -> Element {
 
             color_var -= 75.0 * (1.0 / (i + 1) as f32);
 
+            let stroke_color = props
+                .series_colors
+                .as_ref()
+                .and_then(|colors| colors.get(i))
+                .cloned()
+                .unwrap_or_else(|| format!("rgb({color_var}, 40, 40)"));
+
+            let mut pen_up = true;
             for (index, v) in a.iter().enumerate() {
+                // A NaN value marks a gap: lift the pen so the next valid value
+                // begins a new subpath instead of drawing a line across the gap.
+                // This lets a series cover only part of the shared x-axis.
+                if v.is_nan() {
+                    pen_up = true;
+                    continue;
+                }
+
                 let point = grid.world_to_view(index as f32, *v, false);
 
-                if index == 0 {
+                if pen_up {
                     commands.push(format!("M{},{}", point.x, point.y));
+                    pen_up = false;
                 } else {
                     commands.push(format!("L{},{}", point.x, point.y));
                 }
@@ -273,7 +295,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                     path {
                         d: "{commands}",
                         class: "{props.class_line_path}",
-                        stroke: "rgb({color_var}, 40, 40)",
+                        stroke: "{stroke_color}",
                         stroke_width: "{props.line_width}",
                         stroke_linecap: "round",
                         fill: "transparent",
@@ -285,7 +307,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                             x2: "{d.max.x}",
                             y2: "{d.max.y}",
                             class: "{props.class_line_dot}",
-                            stroke: "rgb({color_var}, 40, 40)",
+                            stroke: "{stroke_color}",
                             stroke_width: "{props.dot_size}",
                             stroke_linecap: "round",
                         }
@@ -295,7 +317,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                             dx: format_args!("{}", point.x + 10.0),
                             dy: "{point.y}",
                             text_anchor: "start",
-                            color: "rgb({color_var}, 40, 40)",
+                            color: "{stroke_color}",
                             class: "{props.class_line_label}",
                             "{label}"
                         }
