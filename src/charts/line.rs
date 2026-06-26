@@ -17,6 +17,10 @@ pub struct LineChartProps {
     /// stroke; missing entries fall back to the generated color.
     #[props(optional)]
     series_colors: Option<Labels>,
+    /// Optional dashed-stroke flag per series. When `true` for a series index the
+    /// line is drawn dashed; missing entries default to a solid line.
+    #[props(optional)]
+    series_dashed: Option<Vec<bool>>,
 
     #[props(default = "100%".to_string(), into)]
     width: String,
@@ -259,6 +263,18 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 .cloned()
                 .unwrap_or_else(|| format!("rgb({color_var}, 40, 40)"));
 
+            let dash_array = if props
+                .series_dashed
+                .as_ref()
+                .and_then(|d| d.get(i))
+                .copied()
+                .unwrap_or(false)
+            {
+                "6 4"
+            } else {
+                "0"
+            };
+
             let mut pen_up = true;
             for (index, v) in a.iter().enumerate() {
                 // A NaN value marks a gap: lift the pen so the next valid value
@@ -298,6 +314,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                         stroke: "{stroke_color}",
                         stroke_width: "{props.line_width}",
                         stroke_linecap: "round",
+                        stroke_dasharray: "{dash_array}",
                         fill: "transparent",
                     },
                     for d in dots {
