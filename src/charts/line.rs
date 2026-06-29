@@ -277,7 +277,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
         )
         .map(|((i, a), label)| {
             let mut commands = Vec::<String>::with_capacity(a.len());
-            let mut dots = Vec::<Rect>::with_capacity(a.len());
+            let mut dots = Vec::<(Rect, String)>::with_capacity(a.len());
             let mut text_point: Option<Point> = None;
 
             color_var -= 75.0 * (1.0 / (i + 1) as f32);
@@ -321,7 +321,11 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 }
 
                 if props.show_dots {
-                    dots.push(Rect::new(point.x, point.y, point.x + 0.1, point.y));
+                    let value_text = match props.label_interpolation {
+                        Some(f) => f(*v),
+                        None => format!("{v}"),
+                    };
+                    dots.push((Rect::new(point.x, point.y, point.x + 0.1, point.y), value_text));
                 }
 
                 if !label.is_empty() && index == (a.len() - 1) {
@@ -343,7 +347,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                         stroke_dasharray: "{dash_array}",
                         fill: "transparent",
                     },
-                    for d in dots {
+                    for (d , value) in dots {
                         line {
                             x1: "{d.min.x}",
                             y1: "{d.min.y}",
@@ -353,6 +357,15 @@ pub fn LineChart(props: LineChartProps) -> Element {
                             stroke: "{stroke_color}",
                             stroke_width: "{props.dot_size}",
                             stroke_linecap: "round",
+                        }
+                        circle {
+                            cx: "{d.min.x}",
+                            cy: "{d.min.y}",
+                            r: "8",
+                            fill: "transparent",
+                            title {
+                                if label.is_empty() { "{value}" } else { "{label}: {value}" }
+                            }
                         }
                     }
                     for point in text_point {
