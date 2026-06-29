@@ -27,6 +27,10 @@ pub struct LineChartProps {
     /// CSS color string. Bands are drawn behind the grid and series.
     #[props(optional)]
     bands: Option<Vec<(usize, usize, String)>>,
+    /// Optional per-point labels used only for hover tooltips (e.g. a full
+    /// timestamp for every point even when the x-axis labels are sparse).
+    #[props(optional)]
+    point_labels: Option<Labels>,
 
     #[props(default = "100%".to_string(), into)]
     width: String,
@@ -327,7 +331,15 @@ pub fn LineChart(props: LineChartProps) -> Element {
                         Some(f) => f(*v),
                         None => format!("{v}"),
                     };
-                    dots.push((Rect::new(point.x, point.y, point.x + 0.1, point.y), value_text));
+                    let x_text = props
+                        .point_labels
+                        .as_ref()
+                        .or(props.labels.as_ref())
+                        .and_then(|l| l.get(index))
+                        .filter(|s| !s.is_empty())
+                        .map(|s| format!("{s} · "))
+                        .unwrap_or_default();
+                    dots.push((Rect::new(point.x, point.y, point.x + 0.1, point.y), format!("{x_text}{value_text}")));
                 }
 
                 if !label.is_empty() && index == (a.len() - 1) {
