@@ -185,8 +185,6 @@ pub fn LineChart(props: LineChartProps) -> Element {
         }
     }
 
-    let mut hover = use_signal(|| None::<(f32, f32, String)>);
-
     let view = Rect::new(
         props.padding_left as f32,
         props.padding_top as f32,
@@ -279,7 +277,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
         )
         .map(|((i, a), label)| {
             let mut commands = Vec::<String>::with_capacity(a.len());
-            let mut dots = Vec::<(Rect, String)>::with_capacity(a.len());
+            let mut dots = Vec::<Rect>::with_capacity(a.len());
             let mut text_point: Option<Point> = None;
 
             color_var -= 75.0 * (1.0 / (i + 1) as f32);
@@ -323,11 +321,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 }
 
                 if props.show_dots {
-                    let value_text = match props.label_interpolation {
-                        Some(f) => f(*v),
-                        None => format!("{v}"),
-                    };
-                    dots.push((Rect::new(point.x, point.y, point.x + 0.1, point.y), value_text));
+                    dots.push(Rect::new(point.x, point.y, point.x + 0.1, point.y));
                 }
 
                 if !label.is_empty() && index == (a.len() - 1) {
@@ -349,7 +343,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                         stroke_dasharray: "{dash_array}",
                         fill: "transparent",
                     },
-                    for (d , value) in dots {
+                    for d in dots {
                         line {
                             x1: "{d.min.x}",
                             y1: "{d.min.y}",
@@ -359,20 +353,6 @@ pub fn LineChart(props: LineChartProps) -> Element {
                             stroke: "{stroke_color}",
                             stroke_width: "{props.dot_size}",
                             stroke_linecap: "round",
-                        }
-                        circle {
-                            cx: "{d.min.x}",
-                            cy: "{d.min.y}",
-                            r: "8",
-                            fill: "transparent",
-                            pointer_events: "all",
-                            onmouseenter: {
-                                let dx = d.min.x;
-                                let dy = d.min.y;
-                                let tip = if label.is_empty() { value.clone() } else { format!("{label}: {value}") };
-                                move |_| hover.set(Some((dx, dy, tip.clone())))
-                            },
-                            onmouseleave: move |_| hover.set(None),
                         }
                     }
                     for point in text_point {
@@ -444,30 +424,6 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 }
 
                 {series_rsx}
-
-                if let Some((hx, hy, text)) = hover() {
-                    g {
-                        class: "dx-tooltip",
-                        pointer_events: "none",
-                        rect {
-                            x: "{hx + 8.0}",
-                            y: "{hy - 22.0}",
-                            width: "{(text.len() as f32) * 7.5 + 12.0}",
-                            height: "18",
-                            rx: "3",
-                            fill: "rgba(13, 17, 23, 0.92)",
-                            stroke: "rgba(139, 148, 158, 0.5)",
-                            stroke_width: "0.5",
-                        }
-                        text {
-                            x: "{hx + 14.0}",
-                            y: "{hy - 9.0}",
-                            fill: "#f0f6fc",
-                            font_size: "11",
-                            "{text}"
-                        }
-                    }
-                }
             }
         }
     }
