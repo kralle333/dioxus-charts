@@ -185,6 +185,8 @@ pub fn LineChart(props: LineChartProps) -> Element {
         }
     }
 
+    let mut hover = use_signal(|| None::<(f32, f32, String)>);
+
     let view = Rect::new(
         props.padding_left as f32,
         props.padding_top as f32,
@@ -364,9 +366,13 @@ pub fn LineChart(props: LineChartProps) -> Element {
                             r: "8",
                             fill: "transparent",
                             pointer_events: "all",
-                            title {
-                                if label.is_empty() { "{value}" } else { "{label}: {value}" }
-                            }
+                            onmouseenter: {
+                                let dx = d.min.x;
+                                let dy = d.min.y;
+                                let tip = if label.is_empty() { value.clone() } else { format!("{label}: {value}") };
+                                move |_| hover.set(Some((dx, dy, tip.clone())))
+                            },
+                            onmouseleave: move |_| hover.set(None),
                         }
                     }
                     for point in text_point {
@@ -438,6 +444,30 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 }
 
                 {series_rsx}
+
+                if let Some((hx, hy, text)) = hover() {
+                    g {
+                        class: "dx-tooltip",
+                        pointer_events: "none",
+                        rect {
+                            x: "{hx + 8.0}",
+                            y: "{hy - 22.0}",
+                            width: "{(text.len() as f32) * 7.5 + 12.0}",
+                            height: "18",
+                            rx: "3",
+                            fill: "rgba(13, 17, 23, 0.92)",
+                            stroke: "rgba(139, 148, 158, 0.5)",
+                            stroke_width: "0.5",
+                        }
+                        text {
+                            x: "{hx + 14.0}",
+                            y: "{hy - 9.0}",
+                            fill: "#f0f6fc",
+                            font_size: "11",
+                            "{text}"
+                        }
+                    }
+                }
             }
         }
     }
