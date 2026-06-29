@@ -21,6 +21,12 @@ pub struct LineChartProps {
     /// line is drawn dashed; missing entries default to a solid line.
     #[props(optional)]
     series_dashed: Option<Vec<bool>>,
+    /// Optional alternating shaded vertical bands, useful for marking day
+    /// boundaries. Each tuple is `(start_index, end_index, fill_color)` where
+    /// the indices reference positions on the x-axis and `fill_color` is any
+    /// CSS color string. Bands are drawn behind the grid and series.
+    #[props(optional)]
+    bands: Option<Vec<(usize, usize, String)>>,
 
     #[props(default = "100%".to_string(), into)]
     width: String,
@@ -206,6 +212,26 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let lines = grid.lines();
     let generated_labels = grid.y.generated_labels();
 
+    // Alternating shaded bands behind the grid/series. Each band is converted
+    // into a plot-area rect spanning the full chart height between two x-axis
+    // indices.
+    let bands_rect: Vec<(f32, f32, f32, f32, String)> = props
+        .bands
+        .as_ref()
+        .map(|bands| {
+            let top = view.min.y;
+            let bottom = view.max.y;
+            bands
+                .iter()
+                .map(|(start, end, color)| {
+                    let x1 = grid.world_to_view(*start as f32, 0.0, false).x;
+                    let x2 = grid.world_to_view(*end as f32, 0.0, false).x;
+                    (x1, top, (x2 - x1).max(0.0), bottom - top, color.clone())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     let grid_labels = if props.show_labels {
         if let Some(labels) = props.labels.as_ref() {
             Some(
@@ -352,6 +378,18 @@ pub fn LineChart(props: LineChartProps) -> Element {
                 class: "{props.class_chart_line}",
                 preserve_aspect_ratio: "xMidYMid meet",
                 view_box: "0 0 {props.viewbox_width} {props.viewbox_height}",
+                g {
+                    class: "dx-bands",
+                    for (x, y, w, h, color) in bands_rect {
+                        rect {
+                            x: "{x}",
+                            y: "{y}",
+                            width: "{w}",
+                            height: "{h}",
+                            fill: "{color}",
+                        }
+                    }
+                }
                 if props.show_grid {
                     g {
                         class: "{props.class_grid}",
