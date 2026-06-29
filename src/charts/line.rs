@@ -363,6 +363,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
                             cy: "{d.min.y}",
                             r: "8",
                             fill: "transparent",
+                            pointer_events: "all",
                             title {
                                 if label.is_empty() { "{value}" } else { "{label}: {value}" }
                             }
